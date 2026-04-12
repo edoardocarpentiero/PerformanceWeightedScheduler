@@ -1,36 +1,32 @@
 #!/bin/bash
 
-# Nome plugin
-PLUGIN_NAME="cinder-compliance"
+echo ">>> CINDER-COMPLIANCE plugin.sh caricato"
 
-echo ">>> [$PLUGIN_NAME] plugin.sh caricato"
+function install_cinder_compliance {
+    echo ">>> [PLUGIN] INSTALL phase"
+}
 
-# DevStack chiama questo file così:
-# source plugin.sh stack install
-# source plugin.sh stack post-config
-# source plugin.sh stack extra
-# source plugin.sh unstack clean
+function configure_cinder_compliance {
+    echo ">>> [PLUGIN] CONFIGURE phase"
+}
 
-if [[ "$1" == "stack" ]]; then
+function init_cinder_compliance {
+    echo ">>> [PLUGIN] INIT phase"
+}
 
-    if [[ "$2" == "install" ]]; then
-        echo ">>> [$PLUGIN_NAME] INSTALL phase"
-    fi
+function start_cinder_compliance {
+    echo ">>> [PLUGIN] START phase"
+}
 
-    if [[ "$2" == "post-config" ]]; then
-        echo ">>> [$PLUGIN_NAME] POST-CONFIG phase"
-    fi
-
-    if [[ "$2" == "extra" ]]; then
-        echo ">>> [$PLUGIN_NAME] EXTRA phase"
-    fi
-
+# 🔥 HOOK DevStack
+if [[ "$1" == "stack" && "$2" == "install" ]]; then
+    install_cinder_compliance
 fi
 
-if [[ "$1" == "unstack" ]]; then
-    echo ">>> [$PLUGIN_NAME] UNSTACK phase"
+if [[ "$1" == "stack" && "$2" == "post-config" ]]; then
+    configure_cinder_compliance
 fi
 
-if [[ "$1" == "clean" ]]; then
-    echo ">>> [$PLUGIN_NAME] CLEAN phase"
+if [[ "$1" == "stack" && "$2" == "extra" ]]; then
+    start_cinder_compliance
 fi
