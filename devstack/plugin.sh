@@ -1,39 +1,37 @@
 #!/bin/bash
 
-echo ">>> CINDER-COMPLIANCE plugin.sh caricato"
-
 function install_cinder_compliance {
-    echo ">>> [PLUGIN] INSTALL phase"
+    echo ">>> [PLUGIN] FASE INSTALL: Copia del file PerformanceWeigher"
+    
+    SOURCE="/opt/stack/cinder-compliance/files/performance_weigher.py"
+    TARGET_DIR="/opt/stack/cinder/cinder/scheduler/weights"
 
-    cp $DEST/cinder-compliance/files/performance_weigher.py \
-       $DEST/cinder/cinder/scheduler/weights/
+    if [ -f "$SOURCE" ]; then
+        cp "$SOURCE" "$TARGET_DIR/"
+        echo ">>> [PLUGIN] OK: File copiato in $TARGET_DIR"
+    else
+        echo ">>> [PLUGIN] ERRORE: Sorgente $SOURCE non trovata!"
+    fi
 }
 
 function configure_cinder_compliance {
-    echo ">>> [PLUGIN] CONFIGURE phase"
+    echo ">>> [PLUGIN] FASE POST-CONFIG: Modifica cinder.conf"
+    
+    CONF="/etc/cinder/cinder.conf"
 
-    iniset $CINDER_CONF DEFAULT scheduler_weight_classes \
-        cinder.scheduler.weights.capacity.CapacityWeigher,\
-        cinder.scheduler.weights.performance_weigher.PerformanceWeigher
+    if [ -f "$CONF" ]; then
+        iniset $CONF DEFAULT scheduler_weight_classes "cinder.scheduler.weights.capacity.CapacityWeigher,cinder.scheduler.weights.performance_weigher.PerformanceWeigher"
+        echo ">>> [PLUGIN] OK: scheduler_weight_classes aggiornato"
+    else
+        echo ">>> [PLUGIN] ERRORE: $CONF non trovato"
+    fi
 }
 
-function init_cinder_compliance {
-    echo ">>> [PLUGIN] INIT phase"
-}
-
-function start_cinder_compliance {
-    echo ">>> [PLUGIN] START phase"
-}
-
-# 🔥 HOOK DevStack
-if [[ "$1" == "stack" && "$2" == "install" ]]; then
-    install_cinder_compliance
-fi
-
-if [[ "$1" == "stack" && "$2" == "post-config" ]]; then
-    configure_cinder_compliance
-fi
-
-if [[ "$1" == "stack" && "$2" == "extra" ]]; then
-    start_cinder_compliance
+# Verifica se il plugin è attivo nel local.conf
+if is_service_enabled cinder-compliance; then
+    if [[ "$1" == "stack" && "$2" == "install" ]]; then
+        install_cinder_compliance
+    elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
+        configure_cinder_compliance
+    fi
 fi
