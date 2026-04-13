@@ -28,10 +28,9 @@ function configure_cinder_compliance {
 }
 
 # Verifica se il plugin è attivo nel local.conf
-if is_service_enabled cinder-compliance; then
-    if [[ "$1" == "stack" && "$2" == "install" ]]; then
-        install_cinder_compliance
-    elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
-        configure_cinder_compliance
-    fi
+
+if [[ "$1" == "stack" && "$2" == "install" ]]; then
+	install_cinder_compliance
+elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
+    configure_cinder_compliance
 fi
