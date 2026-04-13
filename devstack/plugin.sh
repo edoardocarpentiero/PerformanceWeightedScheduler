@@ -3,7 +3,7 @@
 function install_cinder_compliance {
     echo ">>> [PLUGIN] FASE INSTALL: Copia del file PerformanceWeigher"
     
-    SOURCE="/opt/stack/cinder-compliance/files/performance_weigher.py"
+    SOURCE="/opt/stack/cinder-compliance/devstack/script_scheduler/performance_weigher.py"
     TARGET_DIR="/opt/stack/cinder/cinder/scheduler/weights"
 
     if [ -f "$SOURCE" ]; then
