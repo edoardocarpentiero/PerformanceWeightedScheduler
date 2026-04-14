@@ -5,6 +5,9 @@ LOG = logging.getLogger(__name__)
 
 class PerformanceWeigher(weights.BaseHostWeigher):
 
+    def weigh_multiplier(self) -> float:
+        return 1.0
+        
     def _weigh_object(self, host_state, weight_properties):
         host = host_state.host
         backend = host.split('@')[1] if '@' in host else host
