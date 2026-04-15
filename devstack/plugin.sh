@@ -9,12 +9,12 @@ function install_cinder_compliance {
     local TARGET_DIR="/opt/stack/cinder/cinder/scheduler/weights"
     local TARGET_FILE="${TARGET_DIR}/performance_weigher.py"
     local CINDER_DIR="/opt/stack/cinder"
-    local SETUP_CFG="${CINDER_DIR}/setup.cfg"
-    local ENTRY="    PerformanceWeigher = cinder.scheduler.weights.performance_weigher:PerformanceWeigher"
+    local PYPROJECT="${CINDER_DIR}/pyproject.toml"
+    local ENTRY='PerformanceWeigher = "cinder.scheduler.weights.performance_weigher:PerformanceWeigher"'
 
     echo ">>> [PLUGIN] SOURCE: ${SOURCE}"
     echo ">>> [PLUGIN] TARGET: ${TARGET_FILE}"
-    echo ">>> [PLUGIN] SETUP_CFG: ${SETUP_CFG}"
+    echo ">>> [PLUGIN] PYPROJECT: ${PYPROJECT}"
 
     if [[ ! -f "$SOURCE" ]]; then
         echo ">>> [PLUGIN][ERRORE] File sorgente non trovato: ${SOURCE}"
@@ -33,24 +33,31 @@ function install_cinder_compliance {
         return 1
     fi
 
-    if [[ ! -f "$SETUP_CFG" ]]; then
-        echo ">>> [PLUGIN][ERRORE] setup.cfg non trovato: ${SETUP_CFG}"
+    if [[ ! -f "$PYPROJECT" ]]; then
+        echo ">>> [PLUGIN][ERRORE] pyproject.toml non trovato: ${PYPROJECT}"
         return 1
     fi
 
-    if grep -q "PerformanceWeigher = cinder.scheduler.weights.performance_weigher:PerformanceWeigher" "$SETUP_CFG"; then
-        echo ">>> [PLUGIN] Entry point già presente in setup.cfg"
+    if grep -qF "$ENTRY" "$PYPROJECT"; then
+        echo ">>> [PLUGIN] Entry point già presente in pyproject.toml"
     else
-        echo ">>> [PLUGIN] Aggiunta entry point in setup.cfg"
+        echo ">>> [PLUGIN] Aggiunta entry point in pyproject.toml"
 
-        sed -i "/^cinder.scheduler.weights[[:space:]]*=/a\\
-${ENTRY}
-" "$SETUP_CFG"
-
-        if grep -q "PerformanceWeigher = cinder.scheduler.weights.performance_weigher:PerformanceWeigher" "$SETUP_CFG"; then
-            echo ">>> [PLUGIN] OK: entry point aggiunto"
+        if grep -q '^\[project.entry-points."cinder.scheduler.weights"\]' "$PYPROJECT"; then
+            sed -i '/^\[project.entry-points."cinder.scheduler.weights"\]/a\
+'"$ENTRY"'' "$PYPROJECT"
         else
-            echo ">>> [PLUGIN][ERRORE] Impossibile aggiungere entry point a setup.cfg"
+            cat >> "$PYPROJECT" <<EOF
+
+[project.entry-points."cinder.scheduler.weights"]
+$ENTRY
+EOF
+        fi
+
+        if grep -qF "$ENTRY" "$PYPROJECT"; then
+            echo ">>> [PLUGIN] OK: entry point aggiunto in pyproject.toml"
+        else
+            echo ">>> [PLUGIN][ERRORE] Impossibile aggiungere entry point a pyproject.toml"
             return 1
         fi
     fi
@@ -68,7 +75,7 @@ function configure_cinder_compliance {
     echo ">>> [PLUGIN] FASE POST-CONFIG: aggiornamento cinder.conf"
 
     local CONF="/etc/cinder/cinder.conf"
-    local WEIGHERS="CapacityWeigher,PerformanceWeigher"
+    local WEIGHERS="PerformanceWeigher"
 
     echo ">>> [PLUGIN] CONF: ${CONF}"
     echo ">>> [PLUGIN] scheduler_default_weighers: ${WEIGHERS}"
