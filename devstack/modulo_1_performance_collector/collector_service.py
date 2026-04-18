@@ -57,7 +57,7 @@ class PerformanceCollectorService:
                         volume_group,
                     )
                 else:
-                    test_path = f"/tmp/{backend_section}_fio_testfile"
+                    test_path = f"/tmp/{backend_section}_fio_test"
                     LOG.info(
                         "Backend '%s': using fallback fio path '%s'",
                         backend_name,
