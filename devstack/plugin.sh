@@ -4,7 +4,7 @@ set -x
 echo ">>> [PLUGIN] fase: $1 / $2"
 
 install_cinder_compliance() {
-    local SRC="/opt/stack/cinder-compliance/devstack/script_scheduler/performance_weigher.py"
+    local SRC="/opt/stack/cinder-compliance/devstack/modulo_1_performance_collector/performance_weigher.py"
     local DST="/opt/stack/cinder/cinder/scheduler/weights/performance_weigher.py"
     local CINDER_DIR="/opt/stack/cinder"
     local PYPROJECT="${CINDER_DIR}/pyproject.toml"
