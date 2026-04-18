@@ -16,12 +16,10 @@ def insert_import(text: str) -> str:
     lines = text.splitlines()
     insert_idx = None
 
-    # Prima prova vicino agli import di cinder.volume
     for i, line in enumerate(lines):
         if line.startswith("from cinder.volume import") or line.startswith("import cinder.volume"):
             insert_idx = i
 
-    # Fallback: vicino agli import di cinder
     if insert_idx is None:
         for i, line in enumerate(lines):
             if line.startswith("from cinder import") or line.startswith("import cinder"):
@@ -44,7 +42,6 @@ def insert_helper_methods(text: str) -> str:
     if not class_match:
         raise RuntimeError("Classe VolumeManager non trovata in manager.py")
 
-    # Inseriamo subito dopo la definizione della classe
     insert_pos = class_match.end()
 
     helper_block = """
@@ -67,51 +64,56 @@ def insert_helper_methods(text: str) -> str:
     return text[:insert_pos] + "\n\n" + helper_block + text[insert_pos:]
 
 
-def _insert_call_into_method(text: str, method_name: str, call_line: str, marker: str) -> str:
+def _find_method_signature_end(lines: list[str], start_idx: int) -> int:
+    """
+    Trova la riga finale della firma del metodo.
+    Funziona anche con firme multilinea.
+    """
+    paren_balance = 0
+    seen_open = False
+
+    for i in range(start_idx, len(lines)):
+        line = lines[i]
+
+        for ch in line:
+            if ch == "(":
+                paren_balance += 1
+                seen_open = True
+            elif ch == ")":
+                paren_balance -= 1
+
+        stripped = line.strip()
+
+        # Fine firma: parentesi chiuse e riga che termina con :
+        if seen_open and paren_balance == 0 and stripped.endswith(":"):
+            return i
+
+    raise RuntimeError("Impossibile trovare la fine della firma del metodo")
+
+
+def _insert_call_after_signature(text: str, method_name: str, call_line: str, marker: str) -> str:
     if marker in text:
         return text
 
     lines = text.splitlines()
 
-    # Cerca la definizione del metodo
-    def_idx = None
+    start_idx = None
+    def_indent = None
+
     for i, line in enumerate(lines):
-        if re.match(rf'^\s*def\s+{re.escape(method_name)}\s*\(', line):
-            def_idx = i
+        if re.match(rf'^(\s*)def\s+{re.escape(method_name)}\s*\(', line):
+            start_idx = i
+            def_indent = len(line) - len(line.lstrip(" "))
             break
 
-    if def_idx is None:
+    if start_idx is None:
         raise RuntimeError(f"Metodo {method_name} non trovato in manager.py")
 
-    # Trova la prima riga del corpo con contenuto reale
-    body_idx = None
-    body_indent = None
+    end_sig_idx = _find_method_signature_end(lines, start_idx)
 
-    for j in range(def_idx + 1, len(lines)):
-        line = lines[j]
+    body_indent = " " * (def_indent + 4)
+    lines.insert(end_sig_idx + 1, f"{body_indent}{call_line}  {marker}")
 
-        # Salta righe vuote
-        if not line.strip():
-            continue
-
-        # Calcola indentazione
-        indent = len(line) - len(line.lstrip(" "))
-
-        # Se la riga è più indentata della def, è corpo del metodo
-        def_indent = len(lines[def_idx]) - len(lines[def_idx].lstrip(" "))
-        if indent > def_indent:
-            body_idx = j
-            body_indent = " " * indent
-            break
-
-        # Se siamo arrivati a una riga con indentazione <= def, il corpo non è stato trovato
-        if indent <= def_indent:
-            break
-
-    if body_idx is None or body_indent is None:
-        raise RuntimeError(f"Impossibile determinare il corpo del metodo {method_name}")
-
-    lines.insert(body_idx, f"{body_indent}{call_line}  {marker}")
     return "\n".join(lines) + "\n"
 
 
@@ -124,14 +126,14 @@ def patch_manager() -> None:
     text = insert_import(text)
     text = insert_helper_methods(text)
 
-    text = _insert_call_into_method(
+    text = _insert_call_after_signature(
         text=text,
         method_name="init_host",
         call_line="self._run_performance_collector_on_init()",
         marker="# PLUGIN_INIT_PERFORMANCE_COLLECTOR",
     )
 
-    text = _insert_call_into_method(
+    text = _insert_call_after_signature(
         text=text,
         method_name="create_volume",
         call_line="self._run_performance_collector_on_create(context)",
