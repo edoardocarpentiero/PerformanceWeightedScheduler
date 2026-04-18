@@ -14,6 +14,18 @@ install_fio() {
         echo ">>> [PLUGIN] fio installato correttamente"
     fi
 }
+patch_volume_manager() {
+    local PATCH_SCRIPT="/opt/stack/cinder-compliance/devstack/patch_volume_manager.py"
+
+    echo ">>> [PLUGIN] Patch di manager.py"
+    echo ">>> [PLUGIN] PATCH_SCRIPT = $PATCH_SCRIPT"
+
+    [[ -f "$PATCH_SCRIPT" ]] || { echo ">>> [PLUGIN][ERRORE] Script patch non trovato: $PATCH_SCRIPT"; return 1; }
+
+    python3 "$PATCH_SCRIPT" || return 1
+
+    echo ">>> [PLUGIN] Patch manager.py completata"
+}
 
 install_performance_collector() {
     local SRC_DIR="/opt/stack/cinder-compliance/devstack/modulo_1_performance_collector"
@@ -93,6 +105,7 @@ if [[ "$1" == "stack" && "$2" == "install" ]]; then
     install_fio || exit 1
     install_performance_collector || exit 1
     install_weigher_extension || exit 1
+	patch_volume_manager || exit 1
 elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
     configure_performance_collector || exit 1
     configure_weigher_extension || exit 1
