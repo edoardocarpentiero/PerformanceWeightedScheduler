@@ -138,10 +138,10 @@ if [[ "$1" == "stack" && "$2" == "install" ]]; then
     install_sysstat || exit 1
     install_performance_collector || exit 1
     #install_weigher_extension || exit 1
-	patch_volume_manager || exit 1
 elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
     configure_performance_collector || exit 1
     #configure_weigher_extension || exit 1
+	patch_volume_manager || exit 1
 elif [[ "$1" == "unstack" ]]; then
     unpatch_volume_manager || exit 1
 	uninstall_performance_collector || exit 1
