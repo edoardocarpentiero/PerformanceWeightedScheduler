@@ -52,14 +52,22 @@ def insert_helper_methods(text: str) -> str:
     def _run_performance_collector_on_init(self):
         try:
             collector = PerformanceCollectorService()
-            collector.update_all_backend_metrics(context.get_admin_context())
+            collector.update_current_backend_metrics(
+                context.get_admin_context(),
+                self.configuration,
+                self.backend_name,
+            )
         except Exception as exc:
             LOG.warning("Performance Collector init_host failed: %s", exc)
 
     def _run_performance_collector_on_create(self, context):
         try:
             collector = PerformanceCollectorService()
-            collector.update_all_backend_metrics(context)
+            collector.update_current_backend_metrics(
+                context,
+                self.configuration,
+                self.backend_name,
+            )
         except Exception as exc:
             LOG.warning("Performance Collector create_volume failed: %s", exc)
 """.rstrip("\n")
@@ -131,13 +139,17 @@ def _insert_call_before_last_return_in_create(text: str, marker: str) -> str:
         raise RuntimeError("Metodo create_volume non trovato in manager.py")
 
     end_sig_idx = _find_method_signature_end(lines, start_idx)
-
     body_indent = " " * (def_indent + 4)
     insert_idx = None
 
     for j in range(len(lines) - 1, end_sig_idx, -1):
         line = lines[j]
         current_indent = len(line) - len(line.lstrip(" "))
+
+        if line.strip().startswith("def ") and current_indent <= def_indent:
+            break
+        if line.strip().startswith("class ") and current_indent <= def_indent:
+            break
 
         if current_indent == def_indent + 4 and line.lstrip().startswith("return "):
             insert_idx = j
