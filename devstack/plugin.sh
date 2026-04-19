@@ -16,7 +16,7 @@ install_sysstat() {
 }
 
 unpatch_volume_manager() {
-    local UNPATCH_SCRIPT="/opt/stack/cinder-compliance/devstack/unpatch_volume_manager.py"
+    local UNPATCH_SCRIPT="/opt/stack/performance-weighted-scheduler/devstack/unpatch_volume_manager.py"
 
     echo ">>> [PLUGIN] Unpatch di manager.py"
     echo ">>> [PLUGIN] UNPATCH_SCRIPT = $UNPATCH_SCRIPT"
@@ -29,7 +29,7 @@ unpatch_volume_manager() {
 }
 
 patch_volume_manager() {
-    local PATCH_SCRIPT="/opt/stack/cinder-compliance/devstack/patch_volume_manager.py"
+    local PATCH_SCRIPT="/opt/stack/performance-weighted-scheduler/devstack/patch_volume_manager.py"
 
     echo ">>> [PLUGIN] Patch di manager.py"
     echo ">>> [PLUGIN] PATCH_SCRIPT = $PATCH_SCRIPT"
@@ -42,7 +42,7 @@ patch_volume_manager() {
 }
 
 install_performance_collector() {
-    local SRC_DIR="/opt/stack/cinder-compliance/devstack/modulo_1_performance_collector"
+    local SRC_DIR="/opt/stack/performance-weighted-scheduler/devstack/modulo_1_performance_collector"
     local DST_DIR="/opt/stack/cinder/cinder/volume/performance_weighted_scheduler_module1"
 
 
@@ -77,7 +77,7 @@ uninstall_performance_collector() {
 }
 
 install_weigher_extension() {
-    local SRC="/opt/stack/cinder-compliance/devstack/modulo_2_weigher_extension/performance_weigher.py"
+    local SRC="/opt/stack/performance-weighted-scheduler/devstack/modulo_2_weigher_extension/performance_weigher.py"
     local DST="/opt/stack/cinder/cinder/scheduler/weights/performance_weigher.py"
     local CINDER_DIR="/opt/stack/cinder"
     local PYPROJECT="${CINDER_DIR}/pyproject.toml"
