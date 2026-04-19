@@ -1,1 +1,1 @@
-define_plugin cinder-compliance
+define_plugin performance-weighted-scheduler
