@@ -7,7 +7,10 @@ MANAGER_PATH = Path("/opt/stack/cinder/cinder/volume/manager.py")
 
 
 def insert_import(text: str) -> str:
-    import_line = "from cinder.volume.performance_weighted_scheduler_module1.collector_service import PerformanceCollectorService"
+    import_line = (
+        "from cinder.volume.performance_weighted_scheduler_module1.collector_service "
+        "import PerformanceCollectorService"
+    )
     import_marker = "# PLUGIN_IMPORT_PERFORMANCE_COLLECTOR"
 
     if import_marker in text:
@@ -65,10 +68,6 @@ def insert_helper_methods(text: str) -> str:
 
 
 def _find_method_signature_end(lines: list[str], start_idx: int) -> int:
-    """
-    Trova la riga finale della firma del metodo.
-    Funziona anche con firme multilinea.
-    """
     paren_balance = 0
     seen_open = False
 
@@ -82,10 +81,7 @@ def _find_method_signature_end(lines: list[str], start_idx: int) -> int:
             elif ch == ")":
                 paren_balance -= 1
 
-        stripped = line.strip()
-
-        # Fine firma: parentesi chiuse e riga che termina con :
-        if seen_open and paren_balance == 0 and stripped.endswith(":"):
+        if seen_open and paren_balance == 0 and line.strip().endswith(":"):
             return i
 
     raise RuntimeError("Impossibile trovare la fine della firma del metodo")
@@ -110,9 +106,58 @@ def _insert_call_after_signature(text: str, method_name: str, call_line: str, ma
         raise RuntimeError(f"Metodo {method_name} non trovato in manager.py")
 
     end_sig_idx = _find_method_signature_end(lines, start_idx)
-
     body_indent = " " * (def_indent + 4)
     lines.insert(end_sig_idx + 1, f"{body_indent}{call_line}  {marker}")
+
+    return "\n".join(lines) + "\n"
+
+
+def _insert_call_before_return_in_create(text: str, marker: str) -> str:
+    if marker in text:
+        return text
+
+    lines = text.splitlines()
+
+    # trova inizio create_volume
+    start_idx = None
+    def_indent = None
+    for i, line in enumerate(lines):
+        if re.match(r'^\s*def\s+create_volume\s*\(', line):
+            start_idx = i
+            def_indent = len(line) - len(line.lstrip(" "))
+            break
+
+    if start_idx is None:
+        raise RuntimeError("Metodo create_volume non trovato in manager.py")
+
+    # trova fine firma
+    end_sig_idx = _find_method_signature_end(lines, start_idx)
+
+    # cerca il primo return model_update interno al metodo
+    insert_idx = None
+    body_indent = " " * (def_indent + 4)
+
+    for j in range(end_sig_idx + 1, len(lines)):
+        line = lines[j]
+        current_indent = len(line) - len(line.lstrip(" "))
+
+        # se troviamo un'altra def/class allo stesso o minor livello, siamo usciti dal metodo
+        if line.strip().startswith("def ") and current_indent <= def_indent:
+            break
+        if line.strip().startswith("class ") and current_indent <= def_indent:
+            break
+
+        if line.strip() == "return model_update":
+            insert_idx = j
+            break
+
+    if insert_idx is None:
+        raise RuntimeError("Impossibile trovare 'return model_update' in create_volume")
+
+    lines.insert(
+        insert_idx,
+        f"{body_indent}self._run_performance_collector_on_create(context)  {marker}",
+    )
 
     return "\n".join(lines) + "\n"
 
@@ -133,10 +178,8 @@ def patch_manager() -> None:
         marker="# PLUGIN_INIT_PERFORMANCE_COLLECTOR",
     )
 
-    text = _insert_call_after_signature(
+    text = _insert_call_before_return_in_create(
         text=text,
-        method_name="create_volume",
-        call_line="self._run_performance_collector_on_create(context)",
         marker="# PLUGIN_CREATE_PERFORMANCE_COLLECTOR",
     )
 
