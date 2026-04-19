@@ -35,7 +35,6 @@ class SchedulerMetricsAPI:
             "Sending backend metrics to scheduler for backend '%s'",
             metrics.get("backend"),
         )
-
         LOG.debug("Metrics payload: %s", metrics)
 
         try:

@@ -4,7 +4,9 @@ from typing import Any, Dict
 
 from oslo_log import log as logging
 
-from cinder.volume.performance_weighted_scheduler_module1.collector_service import PerformanceCollectorService
+from cinder.volume.performance_weighted_scheduler_module1.collector_service import (
+    PerformanceCollectorService,
+)
 
 LOG = logging.getLogger(__name__)
 
@@ -21,20 +23,20 @@ class VolumeMetricsEndpoint:
         context: Any,
         backend_name: str,
         storage_type: str,
-        test_path: str,
+        device_name: str,
     ) -> Dict[str, Any]:
         LOG.info(
-            "Received fallback request for backend='%s', storage_type='%s', test_path='%s'",
+            "Received fallback request for backend='%s', storage_type='%s', device_name='%s'",
             backend_name,
             storage_type,
-            test_path,
+            device_name,
         )
 
         try:
             metrics = self.collector_service.get_backend_metrics(
                 backend_name=backend_name,
                 storage_type=storage_type,
-                test_path=test_path,
+                device_name=device_name,
             )
 
             LOG.info(

@@ -11,32 +11,32 @@ LOG = logging.getLogger(__name__)
 
 
 class PerformanceMetricsCollector:
-    """Raccoglie metriche prestazionali dei backend tramite fio."""
+    """Raccoglie metriche prestazionali dei backend tramite iostat."""
 
-    def collect_fio_metrics(self, backend_name: str, storage_type: str, test_path: str) -> Dict[str, Any]:
+    def collect_iostat_metrics(
+        self,
+        backend_name: str,
+        storage_type: str,
+        device_name: str,
+    ) -> Dict[str, Any]:
         LOG.info(
-            "Starting fio benchmark for backend='%s', storage_type='%s', test_path='%s'",
+            "Starting iostat collection for backend='%s', storage_type='%s', device='%s'",
             backend_name,
             storage_type,
-            test_path,
+            device_name,
         )
 
         cmd = [
-            "fio",
-            "--name=backend_test",
-            f"--filename={test_path}",
-            "--rw=randread",
-            "--bs=4k",
-            "--size=1G",
-            "--iodepth=32",
-            "--runtime=10",
-            "--time_based",
-            "--direct=1",
-            "--ioengine=libaio",
-            "--output-format=json",
+            "iostat",
+            "-dx",
+            "-y",
+            "-o", "JSON",
+            device_name,
+            "1",
+            "2",
         ]
 
-        LOG.debug("Executing fio command: %s", " ".join(cmd))
+        LOG.debug("Executing iostat command: %s", " ".join(cmd))
 
         try:
             result = subprocess.run(
@@ -46,36 +46,46 @@ class PerformanceMetricsCollector:
                 check=True,
             )
 
-            LOG.debug("fio stdout: %s", result.stdout)
+            LOG.debug("iostat stdout: %s", result.stdout)
 
             data = json.loads(result.stdout)
-            job = data["jobs"][0]
-            read_stats = job["read"]
+            stats = data["sysstat"]["hosts"][0]["statistics"][-1]["disk"]
 
-            latency_ns = read_stats.get("clat_ns", {}).get("mean", 0) or 0
-            latency_ms = round(float(latency_ns) / 1_000_000, 3)
-            throughput_mb_s = round(
-                float(read_stats.get("bw_bytes", 0) or 0) / (1024 * 1024),
-                3,
-            )
+            disk_stats = None
+            for item in stats:
+                if item.get("disk_device") == device_name:
+                    disk_stats = item
+                    break
+
+            if disk_stats is None:
+                raise RuntimeError(f"Device '{device_name}' not found in iostat output")
+
+            reads_per_sec = float(disk_stats.get("r/s", 0) or 0)
+            writes_per_sec = float(disk_stats.get("w/s", 0) or 0)
+            read_kb_s = float(disk_stats.get("rkB/s", 0) or 0)
+            write_kb_s = float(disk_stats.get("wkB/s", 0) or 0)
+            await_ms = float(disk_stats.get("await", 0) or 0)
+            util_pct = float(disk_stats.get("%util", 0) or 0)
 
             metrics = {
                 "backend": backend_name,
                 "storage_type": storage_type,
-                "iops": float(read_stats.get("iops", 0) or 0),
-                "latency_ms": latency_ms,
-                "throughput_mb_s": throughput_mb_s,
+                "device_name": device_name,
+                "iops": reads_per_sec + writes_per_sec,
+                "latency_ms": await_ms,
+                "throughput_kb_s": read_kb_s + write_kb_s,
+                "saturation_pct": util_pct,
                 "updated_at": time.time(),
             }
 
-            LOG.info("fio benchmark completed successfully for backend '%s'", backend_name)
+            LOG.info("iostat collection completed successfully for backend '%s'", backend_name)
             LOG.info("Collected metrics: %s", metrics)
 
             return metrics
 
         except subprocess.CalledProcessError:
-            LOG.exception("fio execution failed for backend '%s'", backend_name)
+            LOG.exception("iostat execution failed for backend '%s'", backend_name)
             raise
         except Exception:
-            LOG.exception("Unexpected error during fio benchmark for backend '%s'", backend_name)
+            LOG.exception("Unexpected error during iostat collection for backend '%s'", backend_name)
             raise

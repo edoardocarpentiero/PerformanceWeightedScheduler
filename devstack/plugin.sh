@@ -3,15 +3,15 @@ set -x
 
 echo ">>> [PLUGIN] fase: $1 / $2"
 
-install_fio() {
-    echo ">>> [PLUGIN] Installazione fio"
+install_sysstat() {
+    echo ">>> [PLUGIN] Installazione sysstat"
 
-    if command -v fio >/dev/null 2>&1; then
-        echo ">>> [PLUGIN] fio già installato"
+    if command -v iostat >/dev/null 2>&1; then
+        echo ">>> [PLUGIN] iostat già installato"
     else
         sudo apt-get update
-        sudo apt-get install -y fio || return 1
-        echo ">>> [PLUGIN] fio installato correttamente"
+        sudo apt-get install -y sysstat || return 1
+        echo ">>> [PLUGIN] sysstat installato correttamente"
     fi
 }
 
@@ -135,7 +135,7 @@ configure_weigher_extension() {
 }
 
 if [[ "$1" == "stack" && "$2" == "install" ]]; then
-    install_fio || exit 1
+    install_sysstat || exit 1
     install_performance_collector || exit 1
     #install_weigher_extension || exit 1
 	patch_volume_manager || exit 1
