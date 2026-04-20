@@ -4,6 +4,7 @@ set -x
 echo ">>> [PLUGIN] fase: $1 / $2"
 
 install_sysstat() {
+
     echo ">>> [PLUGIN] Installazione sysstat"
 
     if command -v iostat >/dev/null 2>&1; then
@@ -12,6 +13,18 @@ install_sysstat() {
         sudo apt-get update
         sudo apt-get install -y sysstat || return 1
         echo ">>> [PLUGIN] sysstat installato correttamente"
+    fi
+}
+
+uninstall_sysstat() {
+    echo ">>> [PLUGIN] Disinstallazione sysstat"
+
+    if dpkg -s sysstat >/dev/null 2>&1; then
+        sudo apt-get remove -y sysstat || return 1
+        sudo apt-get autoremove -y || return 1
+        echo ">>> [PLUGIN] sysstat rimosso correttamente"
+    else
+        echo ">>> [PLUGIN] sysstat non installato, niente da rimuovere"
     fi
 }
 
@@ -92,6 +105,8 @@ install_weigher_extension() {
 uninstall_weigher_extension() {
     local MODULE2_DIR="/opt/stack/cinder/cinder/scheduler/performance_weighted_scheduler_module2"
     local WEIGHER_FILE="/opt/stack/cinder/cinder/scheduler/weights/performance_weigher.py"
+    local PYPROJECT="/opt/stack/cinder/pyproject.toml"
+    local CONF="/etc/cinder/cinder.conf"
 
     echo ">>> [PLUGIN] Disinstallazione Modulo 2 - Weigher Extension"
 
@@ -107,6 +122,26 @@ uninstall_weigher_extension() {
         echo ">>> [PLUGIN] File performance_weigher.py rimosso"
     else
         echo ">>> [PLUGIN] performance_weigher.py non presente"
+    fi
+
+    if [[ -f "$PYPROJECT" ]]; then
+        sed -i '/PerformanceWeigher = "cinder.scheduler.weights.performance_weigher:PerformanceWeigher"/d' "$PYPROJECT" || return 1
+        echo ">>> [PLUGIN] Riferimento a PerformanceWeigher rimosso da pyproject.toml"
+    else
+        echo ">>> [PLUGIN] pyproject.toml non trovato, nessuna modifica eseguita"
+    fi
+
+    if [[ -f "$CONF" ]]; then
+        local CURRENT
+        local UPDATED
+
+        CURRENT=$(iniget "$CONF" DEFAULT scheduler_default_weighers)
+
+        if [[ -n "$CURRENT" ]]; then
+            UPDATED=$(echo "$CURRENT" | sed 's/,*PerformanceWeigher,*//g' | sed 's/,,*/,/g' | sed 's/^,\|,$//g')
+            iniset "$CONF" DEFAULT scheduler_default_weighers "$UPDATED" || return 1
+            echo ">>> [PLUGIN] scheduler_default_weighers aggiornato a: $UPDATED"
+        fi
     fi
 }
 
@@ -127,15 +162,27 @@ configure_performance_collector() {
 
 configure_weigher_extension() {
     local CONF="/etc/cinder/cinder.conf"
+    local CURRENT
+    local UPDATED
 
     echo ">>> [PLUGIN] Configurazione Modulo 2 - Weigher Extension"
     echo ">>> [PLUGIN] CONF = $CONF"
 
     [[ -f "$CONF" ]] || { echo ">>> [PLUGIN][ERRORE] File di configurazione non trovato: $CONF"; return 1; }
 
-    iniset "$CONF" DEFAULT scheduler_default_weighers PerformanceWeigher || return 1
+    CURRENT=$(iniget "$CONF" DEFAULT scheduler_default_weighers)
 
-    echo ">>> [PLUGIN] scheduler_default_weighers = PerformanceWeigher"
+    if [[ -z "$CURRENT" ]]; then
+        UPDATED="PerformanceWeigher"
+    elif [[ "$CURRENT" == *"PerformanceWeigher"* ]]; then
+        UPDATED="$CURRENT"
+    else
+        UPDATED="${CURRENT},PerformanceWeigher"
+    fi
+
+    iniset "$CONF" DEFAULT scheduler_default_weighers "$UPDATED" || return 1
+
+    echo ">>> [PLUGIN] scheduler_default_weighers = $UPDATED"
 }
 
 start_performance_collector_daemon() {
@@ -182,4 +229,5 @@ elif [[ "$1" == "unstack" ]]; then
     stop_performance_collector_daemon || exit 1
     uninstall_performance_collector || exit 1
     uninstall_weigher_extension || exit 1
+	uninstall_sysstat || exit 1
 fi
