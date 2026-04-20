@@ -1,9 +1,9 @@
 from __future__ import annotations
 
+import configparser
 import subprocess
 from typing import Any, Dict, List, Optional
 
-from oslo_config import cfg
 from oslo_log import log as logging
 
 from cinder import context as cinder_context
@@ -14,15 +14,27 @@ from cinder.volume.performance_weighted_scheduler_module1.scheduler_rpc_api impo
     SchedulerMetricsAPI,
 )
 
-CONF = cfg.CONF
 LOG = logging.getLogger(__name__)
+
+CINDER_CONF_PATH = "/etc/cinder/cinder.conf"
 
 
 class PerformanceCollectorService:
-    def __init__(self) -> None:
-        LOG.info("Initializing PerformanceCollectorService")
+    def __init__(self, conf_path: str = CINDER_CONF_PATH) -> None:
+        LOG.info("Initializing PerformanceCollectorService with conf_path='%s'", conf_path)
+        self.conf_path = conf_path
         self.collector = PerformanceMetricsCollector()
         self.rpc_api = SchedulerMetricsAPI()
+
+    def _load_parser(self) -> configparser.ConfigParser:
+        parser = configparser.ConfigParser()
+        read_files = parser.read(self.conf_path)
+
+        if not read_files:
+            raise RuntimeError(f"Unable to read configuration file: {self.conf_path}")
+
+        LOG.info("Configuration loaded successfully from '%s'", self.conf_path)
+        return parser
 
     def _resolve_iostat_device_from_vg(self, volume_group: str) -> Optional[str]:
         try:
@@ -50,6 +62,7 @@ class PerformanceCollectorService:
                 return None
 
             device_name = pv_name.split("/")[-1]
+
             LOG.info(
                 "Resolved volume group '%s' to iostat device '%s'",
                 volume_group,
@@ -65,31 +78,35 @@ class PerformanceCollectorService:
             return None
 
     def _load_backends_from_conf(self) -> List[Dict[str, Any]]:
-        LOG.info("Loading backend configuration from cinder.conf")
+        LOG.info("Loading backend configuration from '%s'", self.conf_path)
 
+        parser = self._load_parser()
         backends: List[Dict[str, Any]] = []
 
-        enabled_backends = getattr(CONF, "enabled_backends", None)
-        if not enabled_backends:
-            LOG.warning("No enabled_backends configured in cinder.conf")
+        enabled_backends_raw = parser.get("DEFAULT", "enabled_backends", fallback="")
+        if not enabled_backends_raw.strip():
+            LOG.warning("No enabled_backends configured in '%s'", self.conf_path)
             return backends
 
-        if isinstance(enabled_backends, str):
-            enabled_backends = [b.strip() for b in enabled_backends.split(",") if b.strip()]
+        enabled_backends = [
+            b.strip() for b in enabled_backends_raw.split(",") if b.strip()
+        ]
 
         LOG.info("Detected enabled backends: %s", enabled_backends)
 
         for backend_section in enabled_backends:
             LOG.info("Processing backend section: %s", backend_section)
 
-            group = getattr(CONF, backend_section, None)
-            if group is None:
-                LOG.warning("Backend section '%s' not found in CONF", backend_section)
+            if not parser.has_section(backend_section):
+                LOG.warning("Backend section '%s' not found in '%s'", backend_section, self.conf_path)
                 continue
 
-            backend_name = getattr(group, "volume_backend_name", backend_section)
-            storage_type = getattr(group, "my_storage_type", "LVM")
-            device_name = getattr(group, "iostat_device", None)
+            backend_conf = dict(parser.items(backend_section))
+
+            backend_name = backend_conf.get("volume_backend_name", backend_section)
+            storage_type = backend_conf.get("my_storage_type", "LVM")
+            device_name = backend_conf.get("iostat_device")
+            volume_group = backend_conf.get("volume_group")
 
             if device_name:
                 LOG.info(
@@ -98,7 +115,6 @@ class PerformanceCollectorService:
                     device_name,
                 )
             else:
-                volume_group = getattr(group, "volume_group", None)
                 if volume_group:
                     device_name = self._resolve_iostat_device_from_vg(volume_group)
 
@@ -154,3 +170,25 @@ class PerformanceCollectorService:
         self.publish_all_backend_metrics(context, backends)
 
         LOG.info("Completed update_all_backend_metrics")
+
+    def get_backend_metrics(
+        self,
+        backend_name: str,
+        storage_type: str,
+        device_name: str,
+    ) -> Dict[str, Any]:
+        LOG.info(
+            "Fetching on-demand metrics for backend='%s', storage_type='%s', device_name='%s'",
+            backend_name,
+            storage_type,
+            device_name,
+        )
+
+        metrics = self.collector.collect_iostat_metrics(
+            backend_name=backend_name,
+            storage_type=storage_type,
+            device_name=device_name,
+        )
+
+        LOG.info("On-demand metrics collected for backend '%s': %s", backend_name, metrics)
+        return metrics

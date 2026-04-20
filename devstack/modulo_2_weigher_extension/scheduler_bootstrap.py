@@ -9,9 +9,6 @@ from cinder.scheduler.performance_weighted_scheduler_module2.metrics_cache impor
 from cinder.scheduler.performance_weighted_scheduler_module2.scheduler_metrics_endpoint import (
     SchedulerMetricsEndpoint,
 )
-from cinder.scheduler.performance_weighted_scheduler_module2.volume_rpc_client import (
-    VolumeMetricsAPI,
-)
 from cinder.scheduler.weights.performance_weigher import PerformanceWeigher
 
 CONF = cfg.CONF
@@ -19,7 +16,6 @@ CONF = cfg.CONF
 
 def init_scheduler_plugin():
     cache = BackendMetricsCache(ttl_seconds=60)
-    volume_rpc_api = VolumeMetricsAPI()
 
     endpoint = SchedulerMetricsEndpoint(cache=cache)
 
@@ -37,13 +33,9 @@ def init_scheduler_plugin():
     )
     server.start()
 
-    weigher = PerformanceWeigher(
-        cache=cache,
-        rpc_api=volume_rpc_api,
-    )
+    PerformanceWeigher.set_cache(cache)
 
     return {
         "cache": cache,
         "rpc_server": server,
-        "weigher": weigher,
     }

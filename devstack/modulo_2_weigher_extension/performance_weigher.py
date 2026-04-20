@@ -2,44 +2,41 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
+from oslo_log import log as logging
+
 from cinder.scheduler import weights
 from cinder.scheduler.performance_weighted_scheduler_module2.metrics_cache import (
     BackendMetricsCache,
 )
-from cinder.scheduler.performance_weighted_scheduler_module2.volume_rpc_client import (
-    VolumeMetricsAPI,
-)
+
+LOG = logging.getLogger(__name__)
 
 
 class PerformanceWeigher(weights.BaseHostWeigher):
-    def __init__(
-        self,
-        cache: BackendMetricsCache,
-        rpc_api: VolumeMetricsAPI,
-    ) -> None:
-        super().__init__()
-        self.cache = cache
-        self.rpc_api = rpc_api
+    CACHE: BackendMetricsCache | None = None
+
+    @classmethod
+    def set_cache(cls, cache: BackendMetricsCache) -> None:
+        cls.CACHE = cache
 
     def weight_multiplier(self) -> float:
         return 1.0
 
     def _weigh_object(self, host_state: Any, weight_properties: Dict[str, Any]) -> float:
         backend_name = self._extract_backend_name(host_state)
-        storage_type = self._extract_storage_type(host_state)
-        device_name = self._extract_device_name(host_state)
 
-        metrics = self.cache.get(backend_name)
-
-        if metrics is None or self.cache.is_stale(backend_name):
-            context = weight_properties.get("context")
-            metrics = self.rpc_api.fetch_backend_metrics(
-                context=context,
-                backend_name=backend_name,
-                storage_type=storage_type,
-                device_name=device_name,
+        metrics = self.CACHE.get(backend_name) if self.CACHE else None
+        if metrics is None or (self.CACHE and self.CACHE.is_stale(backend_name)):
+            LOG.info(
+                "Metrics cache miss/stale for backend '%s', using penalized score",
+                backend_name,
             )
-            self.cache.put(backend_name, metrics)
+            metrics = {
+                "iops": 0,
+                "latency_ms": 9999,
+                "throughput_kb_s": 0,
+                "saturation_pct": 100,
+            }
 
         free_capacity = float(getattr(host_state, "free_capacity_gb", 0) or 0)
         allocated_capacity = float(getattr(host_state, "allocated_capacity_gb", 0) or 0)
@@ -58,6 +55,17 @@ class PerformanceWeigher(weights.BaseHostWeigher):
             - (allocated_capacity * 0.1)
         )
 
+        LOG.info(
+            "Backend '%s': free=%s iops=%s latency=%s throughput=%s saturation=%s score=%s",
+            backend_name,
+            free_capacity,
+            iops,
+            latency_ms,
+            throughput_kb_s,
+            saturation_pct,
+            score,
+        )
+
         return score
 
     @staticmethod
@@ -66,13 +74,3 @@ class PerformanceWeigher(weights.BaseHostWeigher):
         if "@" in host:
             return host.split("@", 1)[1].split("#", 1)[0]
         return host
-
-    @staticmethod
-    def _extract_storage_type(host_state: Any) -> str:
-        capabilities = getattr(host_state, "capabilities", {}) or {}
-        return str(capabilities.get("my_storage_type", "LVM"))
-
-    @staticmethod
-    def _extract_device_name(host_state: Any) -> str:
-        capabilities = getattr(host_state, "capabilities", {}) or {}
-        return str(capabilities.get("iostat_device", ""))

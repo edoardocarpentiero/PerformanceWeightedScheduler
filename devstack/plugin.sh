@@ -4,7 +4,6 @@ set -x
 echo ">>> [PLUGIN] fase: $1 / $2"
 
 install_sysstat() {
-
     echo ">>> [PLUGIN] Installazione sysstat"
 
     if command -v iostat >/dev/null 2>&1; then
@@ -102,49 +101,6 @@ install_weigher_extension() {
     echo ">>> [PLUGIN] Modulo 2 installato correttamente"
 }
 
-uninstall_weigher_extension() {
-    local MODULE2_DIR="/opt/stack/cinder/cinder/scheduler/performance_weighted_scheduler_module2"
-    local WEIGHER_FILE="/opt/stack/cinder/cinder/scheduler/weights/performance_weigher.py"
-    local PYPROJECT="/opt/stack/cinder/pyproject.toml"
-    local CONF="/etc/cinder/cinder.conf"
-
-    echo ">>> [PLUGIN] Disinstallazione Modulo 2 - Weigher Extension"
-
-    if [[ -d "$MODULE2_DIR" ]]; then
-        rm -rf "$MODULE2_DIR" || return 1
-        echo ">>> [PLUGIN] Cartella Modulo 2 rimossa correttamente"
-    else
-        echo ">>> [PLUGIN] Cartella Modulo 2 non presente"
-    fi
-
-    if [[ -f "$WEIGHER_FILE" ]]; then
-        rm -f "$WEIGHER_FILE" || return 1
-        echo ">>> [PLUGIN] File performance_weigher.py rimosso"
-    else
-        echo ">>> [PLUGIN] performance_weigher.py non presente"
-    fi
-
-    if [[ -f "$PYPROJECT" ]]; then
-        sed -i '/PerformanceWeigher = "cinder.scheduler.weights.performance_weigher:PerformanceWeigher"/d' "$PYPROJECT" || return 1
-        echo ">>> [PLUGIN] Riferimento a PerformanceWeigher rimosso da pyproject.toml"
-    else
-        echo ">>> [PLUGIN] pyproject.toml non trovato, nessuna modifica eseguita"
-    fi
-
-    if [[ -f "$CONF" ]]; then
-        local CURRENT
-        local UPDATED
-
-        CURRENT=$(iniget "$CONF" DEFAULT scheduler_default_weighers)
-
-        if [[ -n "$CURRENT" ]]; then
-            UPDATED=$(echo "$CURRENT" | sed 's/,*PerformanceWeigher,*//g' | sed 's/,,*/,/g' | sed 's/^,\|,$//g')
-            iniset "$CONF" DEFAULT scheduler_default_weighers "$UPDATED" || return 1
-            echo ">>> [PLUGIN] scheduler_default_weighers aggiornato a: $UPDATED"
-        fi
-    fi
-}
-
 configure_performance_collector() {
     local CONF="/etc/cinder/cinder.conf"
 
@@ -188,19 +144,25 @@ configure_weigher_extension() {
 start_performance_collector_daemon() {
     local CINDER_DIR="/opt/stack/cinder"
     local MODULE1_PKG="cinder.volume.performance_weighted_scheduler_module1.collector_daemon"
+    local LOG_FILE="/tmp/performance_weighted_scheduler_collector.log"
+    local PID_FILE="/tmp/performance_weighted_scheduler_collector.pid"
 
     echo ">>> [PLUGIN] Avvio collector periodico"
     echo ">>> [PLUGIN] CINDER_DIR = $CINDER_DIR"
     echo ">>> [PLUGIN] MODULE1_PKG = $MODULE1_PKG"
 
+    if [[ -f "$PID_FILE" ]] && ps -p "$(cat "$PID_FILE")" >/dev/null 2>&1; then
+        echo ">>> [PLUGIN] Collector già in esecuzione con PID $(cat "$PID_FILE")"
+        return 0
+    fi
+
     cd "$CINDER_DIR" || return 1
 
-    nohup python3 -m "$MODULE1_PKG" \
-        >/tmp/performance_weighted_scheduler_collector.log 2>&1 &
+    nohup python3 -m "$MODULE1_PKG" >"$LOG_FILE" 2>&1 &
+    echo $! >"$PID_FILE"
 
-    echo $! >/tmp/performance_weighted_scheduler_collector.pid
-
-    echo ">>> [PLUGIN] Collector periodico avviato con PID $(cat /tmp/performance_weighted_scheduler_collector.pid)"
+    echo ">>> [PLUGIN] Collector periodico avviato con PID $(cat "$PID_FILE")"
+    echo ">>> [PLUGIN] Log collector: $LOG_FILE"
 }
 
 stop_performance_collector_daemon() {
@@ -217,6 +179,49 @@ stop_performance_collector_daemon() {
     fi
 }
 
+uninstall_weigher_extension() {
+    local MODULE2_DIR="/opt/stack/cinder/cinder/scheduler/performance_weighted_scheduler_module2"
+    local WEIGHER_FILE="/opt/stack/cinder/cinder/scheduler/weights/performance_weigher.py"
+    local PYPROJECT="/opt/stack/cinder/pyproject.toml"
+    local CONF="/etc/cinder/cinder.conf"
+
+    echo ">>> [PLUGIN] Disinstallazione Modulo 2 - Weigher Extension"
+
+    if [[ -d "$MODULE2_DIR" ]]; then
+        rm -rf "$MODULE2_DIR" || return 1
+        echo ">>> [PLUGIN] Cartella Modulo 2 rimossa correttamente"
+    else
+        echo ">>> [PLUGIN] Cartella Modulo 2 non presente"
+    fi
+
+    if [[ -f "$WEIGHER_FILE" ]]; then
+        rm -f "$WEIGHER_FILE" || return 1
+        echo ">>> [PLUGIN] File performance_weigher.py rimosso"
+    else
+        echo ">>> [PLUGIN] performance_weigher.py non presente"
+    fi
+
+    if [[ -f "$PYPROJECT" ]]; then
+        sed -i '/PerformanceWeigher = "cinder.scheduler.weights.performance_weigher:PerformanceWeigher"/d' "$PYPROJECT" || return 1
+        echo ">>> [PLUGIN] Riferimento a PerformanceWeigher rimosso da pyproject.toml"
+    else
+        echo ">>> [PLUGIN] pyproject.toml non trovato, nessuna modifica eseguita"
+    fi
+
+    if [[ -f "$CONF" ]]; then
+        local CURRENT
+        local UPDATED
+
+        CURRENT=$(iniget "$CONF" DEFAULT scheduler_default_weighers)
+
+        if [[ -n "$CURRENT" ]]; then
+            UPDATED=$(echo "$CURRENT" | sed 's/\(^\|,\)PerformanceWeigher\(,\|$\)/\1/g' | sed 's/,,*/,/g' | sed 's/^,\|,$//g')
+            iniset "$CONF" DEFAULT scheduler_default_weighers "$UPDATED" || return 1
+            echo ">>> [PLUGIN] scheduler_default_weighers aggiornato a: $UPDATED"
+        fi
+    fi
+}
+
 if [[ "$1" == "stack" && "$2" == "install" ]]; then
     install_sysstat || exit 1
     install_performance_collector || exit 1
@@ -229,5 +234,5 @@ elif [[ "$1" == "unstack" ]]; then
     stop_performance_collector_daemon || exit 1
     uninstall_performance_collector || exit 1
     uninstall_weigher_extension || exit 1
-	uninstall_sysstat || exit 1
+    uninstall_sysstat || exit 1
 fi
