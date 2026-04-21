@@ -24,9 +24,6 @@ def _init_conf() -> None:
         default_config_files=["/etc/cinder/cinder.conf"],
     )
 
-    logging.register_options(CONF)
-    logging.setup(CONF, "performance-weighted-scheduler-collector-rpc")
-
     _CONF_INITIALIZED = True
 
     LOG.info("RPC configuration loaded from /etc/cinder/cinder.conf")

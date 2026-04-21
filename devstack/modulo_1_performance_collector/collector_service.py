@@ -4,9 +4,9 @@ import configparser
 import subprocess
 from typing import Any, Dict, List, Optional
 
+from cinder import context as cinder_context
 from oslo_log import log as logging
 
-from cinder import context as cinder_context
 from cinder.volume.performance_weighted_scheduler_module1.performance_metrics import (
     PerformanceMetricsCollector,
 )
@@ -57,17 +57,24 @@ class PerformanceCollectorService:
             )
 
             pv_name = result.stdout.strip()
+
             if not pv_name:
-                LOG.warning("No physical volume found for volume group '%s'", volume_group)
+                LOG.warning(
+                    "No physical volume found for volume group '%s'",
+                    volume_group,
+                )
                 return None
 
+            pv_name = pv_name.splitlines()[0].strip()
             device_name = pv_name.split("/")[-1]
 
             LOG.info(
-                "Resolved volume group '%s' to iostat device '%s'",
+                "Resolved volume group '%s' to iostat device '%s' using physical volume '%s'",
                 volume_group,
                 device_name,
+                pv_name,
             )
+
             return device_name
 
         except Exception:
@@ -98,7 +105,11 @@ class PerformanceCollectorService:
             LOG.info("Processing backend section: %s", backend_section)
 
             if not parser.has_section(backend_section):
-                LOG.warning("Backend section '%s' not found in '%s'", backend_section, self.conf_path)
+                LOG.warning(
+                    "Backend section '%s' not found in '%s'",
+                    backend_section,
+                    self.conf_path,
+                )
                 continue
 
             backend_conf = dict(parser.items(backend_section))
@@ -155,6 +166,7 @@ class PerformanceCollectorService:
                 metrics["backend_section"] = backend.get("backend_section")
 
                 self.rpc_api.push_backend_metrics(context, metrics)
+
                 LOG.info("Metrics published successfully for backend '%s'", backend_name)
 
             except Exception:
