@@ -2,14 +2,10 @@ from __future__ import annotations
 
 from typing import Any, Dict
 
-from oslo_log import log as logging
-
 from cinder.scheduler import weights
 from cinder.scheduler.performance_weighted_scheduler_module2.metrics_cache import (
     BackendMetricsCache,
 )
-
-LOG = logging.getLogger(__name__)
 
 
 class PerformanceWeigher(weights.BaseHostWeigher):
@@ -20,19 +16,27 @@ class PerformanceWeigher(weights.BaseHostWeigher):
         super().__init__()
         self.cache = cache
 
+        print("[DEBUG][weigher] PerformanceWeigher inizializzato", flush=True)
+
     def weight_multiplier(self) -> float:
         return 1.0
 
     def _weigh_object(self, host_state: Any, weight_properties: Dict[str, Any]) -> float:
         backend_name = self._extract_backend_name(host_state)
 
+        print(
+            f"[DEBUG][weigher] Calcolo peso per backend '{backend_name}'",
+            flush=True,
+        )
+
         metrics = self.cache.get(backend_name)
 
         if metrics is None or self.cache.is_stale(backend_name):
-            LOG.warning(
-                "No fresh metrics available for backend '%s', using default penalty values",
-                backend_name,
+            print(
+                f"[WARN][weigher] Metriche assenti o obsolete per backend '{backend_name}', uso valori penalizzanti",
+                flush=True,
             )
+
             metrics = {
                 "iops": 0,
                 "latency_ms": 9999,
@@ -57,16 +61,12 @@ class PerformanceWeigher(weights.BaseHostWeigher):
             - (allocated_capacity * 0.1)
         )
 
-        LOG.info(
-            "Backend '%s': free=%s allocated=%s iops=%s latency=%s throughput=%s saturation=%s score=%s",
-            backend_name,
-            free_capacity,
-            allocated_capacity,
-            iops,
-            latency_ms,
-            throughput_kb_s,
-            saturation_pct,
-            score,
+        print(
+            f"[DEBUG][weigher] Backend '{backend_name}' -> "
+            f"free={free_capacity}, alloc={allocated_capacity}, "
+            f"iops={iops}, lat={latency_ms}, thr={throughput_kb_s}, "
+            f"sat={saturation_pct}, score={score}",
+            flush=True,
         )
 
         return score
