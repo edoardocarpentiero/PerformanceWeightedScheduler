@@ -3,6 +3,7 @@
 set -e
 
 BASE_DIR="/opt/stack/data"
+DEVSTACK_DIR="$HOME/devstack"
 
 sudo mkdir -p "$BASE_DIR"
 sudo chown "$USER:$USER" "$BASE_DIR"
@@ -30,3 +31,24 @@ create_vg "20G" "vg-mid-backing-file" "vg-mid"
 create_vg "100G" "vg-high-backing-file" "vg-high"
 
 echo "Tutti i volume group sono stati creati con successo."
+
+echo "Caricamento credenziali OpenStack..."
+cd "$DEVSTACK_DIR"
+source openrc admin admin
+
+echo "Creazione volume type general_storage..."
+openstack volume type create general_storage || echo "Volume type general_storage già esistente"
+
+echo "Restart servizio cinder-volume..."
+sudo systemctl restart devstack@c-vol
+
+echo "Restart servizio cinder-scheduler..."
+sudo systemctl restart devstack@c-sch
+
+echo "Restart servizio cinder-api..."
+sudo systemctl restart devstack@c-api
+
+echo "Installazione oslo.rootwrap nel virtual environment DevStack..."
+/opt/stack/data/venv/bin/pip install --ignore-installed --no-user oslo.rootwrap
+
+echo "Setup completato."
