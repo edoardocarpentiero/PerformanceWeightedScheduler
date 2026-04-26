@@ -176,13 +176,13 @@ class PerformanceCollectorService:
             )
 
             backend_name = backend_conf.get("volume_backend_name", backend_section)
-            storage_type = backend_conf.get("my_storage_type", "LVM")
+            storage_type_plugin = backend_conf.get("storage_type_plugin", "LVM")
             device_name = backend_conf.get("iostat_device")
             volume_group = backend_conf.get("volume_group")
 
             print(
                 f"[DEBUG][collector_service] backend_name='{backend_name}', "
-                f"storage_type='{storage_type}', device_name='{device_name}', "
+                f"storage_type_plugin='{storage_type_plugin}', device_name='{device_name}', "
                 f"volume_group='{volume_group}'",
                 flush=True,
             )
@@ -207,7 +207,7 @@ class PerformanceCollectorService:
 
             backend_info = {
                 "backend": backend_name,
-                "storage_type": storage_type,
+                "storage_type_plugin": storage_type_plugin,
                 "device_name": device_name,
                 "backend_section": backend_section,
             }
@@ -241,7 +241,7 @@ class PerformanceCollectorService:
             try:
                 metrics = self.collector.collect_iostat_metrics(
                     backend_name=backend["backend"],
-                    storage_type=backend["storage_type"],
+                    storage_type_plugin=backend["storage_type_plugin"],
                     device_name=backend["device_name"],
                 )
 
@@ -286,19 +286,19 @@ class PerformanceCollectorService:
     def get_backend_metrics(
         self,
         backend_name: str,
-        storage_type: str,
+        storage_type_plugin: str,
         device_name: str,
     ) -> Dict[str, Any]:
         print(
             f"[DEBUG][collector_service] Fetching on-demand metrics for "
-            f"backend='{backend_name}', storage_type='{storage_type}', "
+            f"backend='{backend_name}', storage_type_plugin='{storage_type_plugin}', "
             f"device_name='{device_name}'",
             flush=True,
         )
 
         metrics = self.collector.collect_iostat_metrics(
             backend_name=backend_name,
-            storage_type=storage_type,
+            storage_type_plugin=storage_type_plugin,
             device_name=device_name,
         )
 

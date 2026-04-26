@@ -12,12 +12,12 @@ class PerformanceMetricsCollector:
     def collect_iostat_metrics(
         self,
         backend_name: str,
-        storage_type: str,
+        storage_type_plugin: str,
         device_name: str,
     ) -> Dict[str, Any]:
         print(
             f"[DEBUG][performance_metrics] Starting iostat collection for "
-            f"backend='{backend_name}', storage_type='{storage_type}', "
+            f"backend='{backend_name}', storage_type='{storage_type_plugin}', "
             f"device='{device_name}'",
             flush=True,
         )
@@ -75,13 +75,12 @@ class PerformanceMetricsCollector:
 
             metrics = {
                 "backend": backend_name,
-                "storage_type": storage_type,
+                "storage_type_plugin": storage_type_plugin,
                 "device_name": device_name,
                 "iops": reads_per_sec + writes_per_sec,
                 "latency_ms": await_ms,
                 "throughput_kb_s": read_kb_s + write_kb_s,
                 "saturation_pct": util_pct,
-                "updated_at": time.time(),
             }
 
             print(

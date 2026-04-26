@@ -2,24 +2,22 @@ from __future__ import annotations
 
 from typing import Any, Dict, Optional
 import threading
-import time
 
 
 class BackendMetricsCache:
-    def __init__(self, ttl_seconds: int = 60) -> None:
+    def __init__(self) -> None:
         self._data: Dict[str, Dict[str, Any]] = {}
         self._lock = threading.Lock()
-        self._ttl_seconds = ttl_seconds
 
         print(
-            f"[DEBUG][metrics_cache] Cache inizializzata con TTL={ttl_seconds} secondi",
+            "[DEBUG][metrics_cache] Cache metriche inizializzata",
             flush=True,
         )
 
     def put(self, backend_name: str, metrics: Dict[str, Any]) -> None:
         with self._lock:
             print(
-                f"[DEBUG][metrics_cache] Inserimento metriche per backend '{backend_name}'",
+                f"[DEBUG][metrics_cache] Salvataggio metriche per backend '{backend_name}'",
                 flush=True,
             )
             self._data[backend_name] = metrics
@@ -29,37 +27,45 @@ class BackendMetricsCache:
             metrics = self._data.get(backend_name)
 
             print(
-                f"[DEBUG][metrics_cache] Recupero metriche per backend '{backend_name}': {metrics}",
+                f"[DEBUG][metrics_cache] Lettura metriche per backend '{backend_name}': {metrics}",
                 flush=True,
             )
 
             return metrics
 
-    def is_stale(self, backend_name: str) -> bool:
+    def find_by_host_state(self, host_state_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Cerca le metriche verificando se il nome del backend presente in cache
+        compare dentro host_state.host.
+
+        Esempio:
+        - chiave cache: low_cap
+        - host_state.host: controller@low_cap#pool
+        """
         with self._lock:
-            metrics = self._data.get(backend_name)
-
-            if not metrics:
-                print(
-                    f"[DEBUG][metrics_cache] Metriche assenti per backend '{backend_name}'",
-                    flush=True,
-                )
-                return True
-
-            updated_at = metrics.get("updated_at")
-
-            if updated_at is None:
-                print(
-                    f"[DEBUG][metrics_cache] Timestamp mancante per backend '{backend_name}'",
-                    flush=True,
-                )
-                return True
-
-            stale = (time.time() - float(updated_at)) > self._ttl_seconds
-
             print(
-                f"[DEBUG][metrics_cache] Verifica stale backend '{backend_name}': {stale}",
+                f"[DEBUG][metrics_cache] Ricerca metriche per host_state '{host_state_name}'",
                 flush=True,
             )
 
-            return stale
+            for backend_name, metrics in self._data.items():
+                if backend_name in host_state_name:
+                    print(
+                        f"[DEBUG][metrics_cache] Corrispondenza trovata: "
+                        f"backend cache '{backend_name}' presente in host_state '{host_state_name}'",
+                        flush=True,
+                    )
+                    return metrics
+
+            print(
+                f"[WARN][metrics_cache] Nessuna metrica trovata per host_state '{host_state_name}'",
+                flush=True,
+            )
+            return None
+
+
+_CACHE = BackendMetricsCache()
+
+
+def get_metrics_cache() -> BackendMetricsCache:
+    return _CACHE
