@@ -158,12 +158,13 @@ start_performance_collector_daemon() {
         return 0
     fi
 
-    cd "$CINDER_DIR" || return 1
+   cd "$CINDER_DIR" || return 1
 
-    nohup python3 -m "$MODULE1_PKG" >"$LOG_FILE" 2>&1 &
-    echo $! >"$PID_FILE"
+	setsid nohup python3 -m "$MODULE1_PKG" >"$LOG_FILE" 2>&1 < /dev/null &
+	echo $! >"$PID_FILE"
+	disown || true
 
-    echo ">>> [PLUGIN] Collector periodico avviato con PID $(cat "$PID_FILE")"
+	echo ">>> [PLUGIN] Collector periodico avviato con PID $(cat "$PID_FILE")"
     echo ">>> [PLUGIN] Log collector: $LOG_FILE"
 }
 
