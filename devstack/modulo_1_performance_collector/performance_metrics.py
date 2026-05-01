@@ -68,10 +68,31 @@ class PerformanceMetricsCollector:
 
             reads_per_sec = float(disk_stats.get("r/s", 0) or 0)
             writes_per_sec = float(disk_stats.get("w/s", 0) or 0)
+            
+            discards_per_sec = float(disk_stats.get("d/s", 0) or 0)
+            flushes_per_sec = float(disk_stats.get("f/s", 0) or 0)
+
             read_kb_s = float(disk_stats.get("rkB/s", 0) or 0)
             write_kb_s = float(disk_stats.get("wkB/s", 0) or 0)
-            await_ms = float(disk_stats.get("await", 0) or 0)
-            util_pct = float(disk_stats.get("%util", 0) or 0)
+            util_pct = float(disk_stats.get("util", 0) or 0)
+
+            r_await = float(disk_stats.get("r_await", 0) or 0)
+            w_await = float(disk_stats.get("w_await", 0) or 0)
+            d_await = float(disk_stats.get("d_await", 0) or 0)
+            f_await = float(disk_stats.get("f_await", 0) or 0)
+
+            total_ops = reads_per_sec + writes_per_sec + discards_per_sec + flushes_per_sec
+
+            if total_ops > 0:
+                await_ms = (
+                                   (r_await * reads_per_sec)
+                                   + (w_await * writes_per_sec)
+                                   + (d_await * discards_per_sec)
+                                   + (f_await * flushes_per_sec)
+                           ) / total_ops
+            else:
+                await_ms = 0.0
+
 
             metrics = {
                 "backend": backend_name,
