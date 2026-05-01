@@ -51,4 +51,18 @@ sudo systemctl restart devstack@c-api
 echo "Installazione oslo.rootwrap nel virtual environment DevStack..."
 /opt/stack/data/venv/bin/pip install --ignore-installed --no-user oslo.rootwrap
 
+echo "Riavvio Performance Collector daemon..."
+
+if [[ -f "$PID_FILE" ]] && ps -p "$(cat "$PID_FILE")" >/dev/null 2>&1; then
+    echo "Collector già in esecuzione con PID $(cat "$PID_FILE")"
+else
+    cd "$CINDER_DIR"
+    nohup python3 -m "$MODULE1_PKG" >"$LOG_FILE" 2>&1 < /dev/null &
+    echo $! >"$PID_FILE"
+    disown || true
+
+    echo "Collector avviato con PID $(cat "$PID_FILE")"
+    echo "Log collector: $LOG_FILE"
+fi
+
 echo "Setup completato."
