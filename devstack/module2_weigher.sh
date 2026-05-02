@@ -75,7 +75,7 @@ install_weigher_extension() {
     fi
 
     echo ">>> [PLUGIN] Reinstallazione editable di Cinder"
-    (cd "$CINDER_DIR" && python3 -m pip install --break-system-packages -e .) || return 1
+    (cd "$CINDER_DIR" && /opt/stack/data/venv/bin/python -m pip install -e .) || return 1
 
     echo ">>> [PLUGIN] Modulo 2 installato correttamente"
 }
