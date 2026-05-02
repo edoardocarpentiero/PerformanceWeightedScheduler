@@ -15,6 +15,43 @@ install_sysstat() {
     fi
 }
 
+install_storage_bonus_config() {
+    local CONFIG_FILE="/etc/cinder/performance_storage_bonus.json"
+
+    echo ">>> [PLUGIN] Creazione file configurazione bonus storage"
+    echo ">>> [PLUGIN] CONFIG_FILE = $CONFIG_FILE"
+
+    sudo tee "$CONFIG_FILE" >/dev/null <<EOF
+[
+  {
+    "storage_type_plugin": "SSD",
+    "storage_bonus": 10.0
+  },
+  {
+    "storage_type_plugin": "HDD",
+    "storage_bonus": 0.0
+  }
+]
+EOF
+
+    sudo chmod 644 "$CONFIG_FILE" || return 1
+
+    echo ">>> [PLUGIN] File bonus storage creato correttamente"
+}
+
+uninstall_storage_bonus_config() {
+    local CONFIG_FILE="/etc/cinder/performance_storage.json"
+
+    echo ">>> [PLUGIN] Rimozione file configurazione bonus storage"
+
+    if [[ -f "$CONFIG_FILE" ]]; then
+        sudo rm -f "$CONFIG_FILE" || return 1
+        echo ">>> [PLUGIN] File bonus storage rimosso"
+    else
+        echo ">>> [PLUGIN] File bonus storage non presente, niente da rimuovere"
+    fi
+}
+
 uninstall_sysstat() {
     echo ">>> [PLUGIN] Disinstallazione sysstat"
 
@@ -232,9 +269,11 @@ elif [[ "$1" == "stack" && "$2" == "post-config" ]]; then
     configure_performance_collector || exit 1
     configure_weigher_extension || exit 1
     start_performance_collector_daemon || exit 1
+	install_storage_bonus_config || exit 1
 elif [[ "$1" == "unstack" ]]; then
     stop_performance_collector_daemon || exit 1
     uninstall_performance_collector || exit 1
     uninstall_weigher_extension || exit 1
+	uninstall_storage_bonus_config || exit 1
     uninstall_sysstat || exit 1
 fi
