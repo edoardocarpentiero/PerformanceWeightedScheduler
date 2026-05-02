@@ -30,7 +30,7 @@ def load_storage_bonus_map() -> Dict[str, float]:
         bonus_map: Dict[str, float] = {}
 
         for item in data:
-            storage_type = str(item.get("storage_type_plugin", "")).upper()
+            storage_type = str(item.get("storage_type_plugin", "unknown")).upper()
             storage_bonus = float(item.get("storage_bonus", 0.0))
 
             if storage_type:
