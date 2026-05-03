@@ -16,7 +16,7 @@ class PerformanceMetricsCollector:
         device_name: str,
     ) -> Dict[str, Any]:
         print(
-            f"[DEBUG][performance_metrics] Starting iostat collection for "
+            f"[DEBUG][performance_metrics] Avvio raccolta iostat per "
             f"backend='{backend_name}', storage_type='{storage_type_plugin}', "
             f"device='{device_name}'",
             flush=True,
@@ -33,7 +33,7 @@ class PerformanceMetricsCollector:
         ]
 
         print(
-            f"[DEBUG][performance_metrics] Executing command: {' '.join(cmd)}",
+            f"[DEBUG][performance_metrics] Esecuzione comando: {' '.join(cmd)}",
             flush=True,
         )
 
@@ -46,11 +46,11 @@ class PerformanceMetricsCollector:
             )
 
             print(
-                f"[DEBUG][performance_metrics] iostat stdout: {result.stdout}",
+                f"[DEBUG][performance_metrics] stdout di iostat: {result.stdout}",
                 flush=True,
             )
             print(
-                f"[DEBUG][performance_metrics] iostat stderr: {result.stderr}",
+                f"[DEBUG][performance_metrics] stderr di iostat: {result.stderr}",
                 flush=True,
             )
 
@@ -64,7 +64,7 @@ class PerformanceMetricsCollector:
                     break
 
             if disk_stats is None:
-                raise RuntimeError(f"Device '{device_name}' not found in iostat output")
+                raise RuntimeError(f"Dispositivo '{device_name}' non trovato nell'output di iostat")
 
             reads_per_sec = float(disk_stats.get("r/s", 0) or 0)
             writes_per_sec = float(disk_stats.get("w/s", 0) or 0)
@@ -80,12 +80,11 @@ class PerformanceMetricsCollector:
 
             if total_ops > 0:
                 await_ms = (
-                                   (r_await * reads_per_sec)
-                                   + (w_await * writes_per_sec)
-                           ) / total_ops
+                    (r_await * reads_per_sec)
+                    + (w_await * writes_per_sec)
+                ) / total_ops
             else:
                 await_ms = 0.0
-
 
             metrics = {
                 "backend": backend_name,
@@ -98,7 +97,7 @@ class PerformanceMetricsCollector:
             }
 
             print(
-                f"[DEBUG][performance_metrics] Collected metrics for backend "
+                f"[DEBUG][performance_metrics] Metriche raccolte per il backend "
                 f"'{backend_name}': {metrics}",
                 flush=True,
             )
@@ -106,15 +105,15 @@ class PerformanceMetricsCollector:
 
         except subprocess.CalledProcessError as exc:
             print(
-                f"[ERROR][performance_metrics] iostat execution failed for backend "
+                f"[ERROR][performance_metrics] Esecuzione di iostat non riuscita per il backend "
                 f"'{backend_name}': {exc}",
                 flush=True,
             )
             raise
         except Exception as exc:
             print(
-                f"[ERROR][performance_metrics] Unexpected error during iostat "
-                f"collection for backend '{backend_name}': {exc}",
+                f"[ERROR][performance_metrics] Errore imprevisto durante la raccolta iostat "
+                f"per il backend '{backend_name}': {exc}",
                 flush=True,
             )
             raise
