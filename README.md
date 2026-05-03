@@ -197,7 +197,7 @@ Eseguire:
 
 ---
 
-### 2. Setup ambiente di test
+### 2. Setup e validazione ambiente di test
 
 ```bash
 cd /opt/stack/performance-weighted-scheduler/test_script
@@ -205,14 +205,48 @@ chmod +x setup_env.sh
 ./setup_env.sh
 ```
 
-Verifica disponibilità servizi:
+Eseguire il comando di autenticazione
+```bash
+source openrc admin admin
+```
 
+2.1 Verifica disponibilità servizi:
 ```bash
 openstack volume service list
 ```
+<img width="1004" height="143" alt="image" src="https://github.com/user-attachments/assets/7d3b63b1-3cb3-4df6-bd99-9d35836a9727" />
+
+2.2 Verifica capacità BE e loop device attivi:
+```bash
+sudo vgs
+```
+<img width="745" height="169" alt="image" src="https://github.com/user-attachments/assets/0c2274f8-e10c-4b5f-957d-b24eb287e1f3" />
+
+2.3 Creazione volume:
+
+```bash
+openstack volume create --size <size_GB> <nome_volume>
+```
+Esempio:
+
+```bash
+openstack volume create --size 3 volume_1
+```
+<img width="407" height="390" alt="image" src="https://github.com/user-attachments/assets/b920ac29-17a0-4efa-b596-d82a91c2bb97" />
+
+2.4 Verifica disponibilità volumi VL:
+
+```bash
+openstack volume list
+```
+<img width="592" height="74" alt="image" src="https://github.com/user-attachments/assets/455e2160-68e6-4ab0-94e8-a1bd8f496816" />
+
 ---
 
 ### 3. Simulazione I/O
+Lo script simulate_io.sh viene utilizzato per generare artificialmente carico di lettura e scrittura su uno specifico Volume Group LVM. Riceve in input il nome del Volume Group, crea al suo interno un volume logico temporaneo da 512 MB e avvia un ciclo continuo di operazioni di scrittura e lettura tramite il comando dd.
+
+Lo script rimane attivo fino all’interruzione manuale dell’utente tramite CTRL+C. Alla chiusura, rimuove automaticamente il volume temporaneo creato, evitando di lasciare risorse inutilizzate nel sistema. Questo strumento è stato utilizzato per produrre attività reale sui backend e verificare la corretta raccolta delle metriche da parte di iostat, come IOPS, throughput, latenza e utilizzo del dispositivo.
 
 ```bash
 chmod +x simulate_io.sh
@@ -225,7 +259,7 @@ Esempio:
 ./simulate_io.sh vg-high
 ```
 
-
+N.B.: durante 
 
 ## Note finali
 
