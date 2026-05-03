@@ -244,9 +244,9 @@ openstack volume list
 ---
 
 ### 3. Simulazione I/O
-Lo script simulate_io.sh viene utilizzato per generare artificialmente carico di lettura e scrittura su uno specifico Volume Group LVM. Riceve in input il nome del Volume Group, crea al suo interno un volume logico temporaneo da 512 MB e avvia un ciclo continuo di operazioni di scrittura e lettura tramite il comando dd.
+Lo script `simulate_io.sh` viene utilizzato per generare artificialmente carico di lettura e scrittura su uno specifico Volume Group LVM. Riceve in input il nome del `Volume Group`, crea al suo interno un volume logico temporaneo da 512 MB e avvia un ciclo continuo di operazioni di scrittura e lettura tramite il comando dd.
 
-Lo script rimane attivo fino all’interruzione manuale dell’utente tramite CTRL+C. Alla chiusura, rimuove automaticamente il volume temporaneo creato, evitando di lasciare risorse inutilizzate nel sistema. Questo strumento è stato utilizzato per produrre attività reale sui backend e verificare la corretta raccolta delle metriche da parte di iostat, come IOPS, throughput, latenza e utilizzo del dispositivo.
+Lo script rimane attivo fino all’interruzione manuale dell’utente tramite `CTRL+C`. Alla chiusura, rimuove automaticamente il volume temporaneo creato, evitando di lasciare risorse inutilizzate nel sistema. Questo strumento è stato utilizzato per produrre attività reale sui backend e verificare la corretta raccolta delle metriche da parte di `iostat`, come IOPS, throughput, latenza e utilizzo del dispositivo.
 
 ```bash
 chmod +x simulate_io.sh
@@ -264,3 +264,4 @@ Esempio:
 - Il plugin è attualmente progettato principalmente per ambienti LVM-based.
 - Il sistema è facilmente estendibile verso altri driver di storage.
 - Il file JSON di bonus consente una gestione dinamica delle preferenze hardware.
+- Per la verifica delle attività eseguite dallo scheduler: `sudo journalctl -u devstack@c-sch -f > test.txt`
