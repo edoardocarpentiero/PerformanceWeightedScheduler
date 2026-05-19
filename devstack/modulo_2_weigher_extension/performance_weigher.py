@@ -17,7 +17,7 @@ STORAGE_BONUS_CONFIG = "/etc/cinder/performance_storage_bonus.json"
 def caricaJSONStorageBonus() -> Dict[str, float]:
     if not os.path.exists(STORAGE_BONUS_CONFIG):
         print(
-            f"[WARN][weigher] File bonus storage non trovato: {STORAGE_BONUS_CONFIG}. "
+            f"[PLUGIN - MD2 >> weigher] File bonus storage non trovato: {STORAGE_BONUS_CONFIG}. "
             "Uso bonus pari a 0.",
             flush=True,
         )
@@ -36,12 +36,12 @@ def caricaJSONStorageBonus() -> Dict[str, float]:
             if storage_type:
                 bonus_map[storage_type] = storage_bonus
 
-        print(f"[PLUGIN - MD2][weigher] Bonus storage caricati: {bonus_map}", flush=True)
+        print(f"[PLUGIN - MD2 >> weigher]  Bonus storage caricati: {bonus_map}", flush=True)
         return bonus_map
 
     except Exception as exc:
         print(
-            f"[ERROR][weigher] Errore lettura file bonus storage: {exc}. "
+            f"[PLUGIN - MD2 >> weigher]  Errore lettura file bonus storage: {exc}. "
             "Uso bonus pari a 0.",
             flush=True,
         )
@@ -56,7 +56,7 @@ class PerformanceWeigher(weights.BaseHostWeigher):
         self.cache = get_metrics_cache()
         self.storage_bonus_map = caricaJSONStorageBonus()
 
-        print("[PLUGIN - MD2][weigher] PerformanceWeigher inizializzato", flush=True)
+        print("[PLUGIN - MD2 >> weigher]  PerformanceWeigher inizializzato", flush=True)
 
     def weight_multiplier(self) -> float:
         return 2
@@ -65,7 +65,7 @@ class PerformanceWeigher(weights.BaseHostWeigher):
         host_state_name = getattr(host_state, "host", "")
 
         print(
-            f"[PLUGIN - MD2][weigher] Calcolo peso per host '{host_state_name}'",
+            f"[PLUGIN - MD2 >> weigher]  Calcolo peso per host '{host_state_name}'",
             flush=True,
         )
 
@@ -73,7 +73,7 @@ class PerformanceWeigher(weights.BaseHostWeigher):
 
         if metrics is None:
             print(
-                f"[WARN][weigher] Metriche non disponibili per host_state "
+                f"[PLUGIN - MD2 >> weigher]  Metriche non disponibili per host_state "
                 f"'{host_state_name}', uso valori penalizzanti",
                 flush=True,
             )
@@ -106,7 +106,7 @@ class PerformanceWeigher(weights.BaseHostWeigher):
         )
 
         print(
-            f"[PLUGIN - MD2][weigher] HostState '{host_state_name}' -> "
+            f"[PLUGIN - MD2 >> weigher]  HostState '{host_state_name}' -> "
             f"iops={iops}, latency={latency_ms}, throughput={throughput_kb_s}, "
             f"saturation={saturation_pct}, storage={storage_type_plugin}, "
             f"bonus={storage_bonus}, score={score}",

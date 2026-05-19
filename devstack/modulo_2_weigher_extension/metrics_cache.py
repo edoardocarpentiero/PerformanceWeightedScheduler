@@ -10,14 +10,14 @@ class BackendMetricsCache:
         self._lock = threading.Lock()
 
         print(
-            "[PLUGIN - MD2][metrics_cache] Cache metriche inizializzata",
+            "[PLUGIN - MD2 >> metrics_cache] Cache metriche inizializzata",
             flush=True,
         )
 
     def put(self, backend_name: str, metrics: Dict[str, Any]) -> None:
         with self._lock:
             print(
-                f"[PLUGIN - MD2][metrics_cache] Salvataggio metriche per backend '{backend_name}'",
+                f"[PLUGIN - MD2 >> metrics_cache] Salvataggio metriche per backend '{backend_name}'",
                 flush=True,
             )
             self._data[backend_name] = metrics
@@ -27,7 +27,7 @@ class BackendMetricsCache:
             metrics = self._data.get(backend_name)
 
             print(
-                f"[PLUGIN - MD2][metrics_cache] Lettura metriche per backend '{backend_name}': {metrics}",
+                f"[PLUGIN - MD2 >> metrics_cache] Lettura metriche per backend '{backend_name}': {metrics}",
                 flush=True,
             )
 
@@ -44,21 +44,21 @@ class BackendMetricsCache:
         """
         with self._lock:
             print(
-                f"[PLUGIN - MD2][metrics_cache] Ricerca metriche per host_state '{host_state_name}'",
+                f"[PLUGIN - MD2 >> metrics_cache] Ricerca metriche per host_state '{host_state_name}'",
                 flush=True,
             )
 
             for backend_name, metrics in self._data.items():
                 if backend_name in host_state_name:
                     print(
-                        f"[PLUGIN - MD2][metrics_cache] Corrispondenza trovata: "
+                        f"[PLUGIN - MD2 >> metrics_cache] Corrispondenza trovata: "
                         f"backend cache '{backend_name}' presente in host_state '{host_state_name}'",
                         flush=True,
                     )
                     return metrics
 
             print(
-                f"[WARN][metrics_cache] Nessuna metrica trovata per host_state '{host_state_name}'",
+                f"[PLUGIN - MD2 >> metrics_cache] Nessuna metrica trovata per host_state '{host_state_name}'",
                 flush=True,
             )
             return None

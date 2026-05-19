@@ -13,10 +13,10 @@ _CONF_INITIALIZED = False
 def _init_conf() -> None:
     global _CONF_INITIALIZED
 
-    print("[PLUGIN - MD1][scheduler_rpc_api] ingresso in _init_conf()", flush=True)
+    print("[PLUGIN - MD1 >> scheduler_rpc_api] ingresso in _init_conf()", flush=True)
 
     if _CONF_INITIALIZED:
-        print("[PLUGIN - MD1][scheduler_rpc_api] CONF già inizializzato", flush=True)
+        print("[PLUGIN - MD1 >> scheduler_rpc_api] CONF già inizializzato", flush=True)
         return
 
     CONF(
@@ -28,7 +28,7 @@ def _init_conf() -> None:
     _CONF_INITIALIZED = True
 
     print(
-        "[PLUGIN - MD1][scheduler_rpc_api] Configurazione RPC caricata da "
+        "[PLUGIN - MD1 >> scheduler_rpc_api] Configurazione RPC caricata da "
         "/etc/cinder/cinder.conf",
         flush=True,
     )
@@ -38,7 +38,7 @@ class SchedulerMetricsAPI:
     RPC_API_VERSION = "1.0"
 
     def __init__(self) -> None:
-        print("[PLUGIN - MD1][scheduler_rpc_api] Inizializzazione di SchedulerMetricsAPI", flush=True)
+        print("[PLUGIN - MD1 >> scheduler_rpc_api] Inizializzazione di SchedulerMetricsAPI", flush=True)
 
         _init_conf()
 
@@ -48,49 +48,49 @@ class SchedulerMetricsAPI:
         )
 
         print(
-            f"[PLUGIN - MD1][scheduler_rpc_api] Target creato: topic='{target.topic}', "
+            f"[PLUGIN - MD1 >> scheduler_rpc_api] Target creato: topic='{target.topic}', "
             f"version='{target.version}'",
             flush=True,
         )
 
-        print("[PLUGIN - MD1][scheduler_rpc_api] Creazione del transport RPC", flush=True)
+        print("[PLUGIN - MD1 >> scheduler_rpc_api] Creazione del transport RPC", flush=True)
         transport = oslo_messaging.get_rpc_transport(CONF)
 
-        print("[PLUGIN - MD1][scheduler_rpc_api] Creazione del client RPC", flush=True)
+        print("[PLUGIN - MD1 >> scheduler_rpc_api] Creazione del client RPC", flush=True)
         self.client = oslo_messaging.get_rpc_client(transport, target)
 
         print(
-            "[PLUGIN - MD1][scheduler_rpc_api] SchedulerMetricsAPI inizializzato correttamente",
+            "[PLUGIN - MD1 >> scheduler_rpc_api] SchedulerMetricsAPI inizializzato correttamente",
             flush=True,
         )
 
     def inviaMetricheScheduler(self, context: Any, metrics: Dict[str, Any]) -> None:
         print(
-            f"[PLUGIN - MD1][scheduler_rpc_api] Invio metriche backend per "
+            f"[PLUGIN - MD1 >> scheduler_rpc_api] Invio metriche backend per "
             f"backend='{metrics.get('backend')}'",
             flush=True,
         )
 
         print(
-            f"[PLUGIN - MD1][scheduler_rpc_api] Payload={metrics}",
+            f"[PLUGIN - MD1 >> scheduler_rpc_api] Payload={metrics}",
             flush=True,
         )
 
         try:
             cctxt = self.client.prepare()
-            print("[PLUGIN - MD1][scheduler_rpc_api] Contesto RPC preparato", flush=True)
+            print("[PLUGIN - MD1 >> scheduler_rpc_api] Contesto RPC preparato", flush=True)
 
             cctxt.cast(context, "update_backend_metrics", metrics=metrics)
 
             print(
-                f"[PLUGIN - MD1][scheduler_rpc_api] Metriche inviate correttamente per "
+                f"[PLUGIN - MD1 >> scheduler_rpc_api] Metriche inviate correttamente per "
                 f"backend='{metrics.get('backend')}'",
                 flush=True,
             )
 
         except Exception as exc:
             print(
-                f"[ERROR][scheduler_rpc_api] Impossibile inviare le metriche per "
+                f"[PLUGIN - MD1 >> scheduler_rpc_api] Impossibile inviare le metriche per "
                 f"backend='{metrics.get('backend')}': {exc}",
                 flush=True,
             )

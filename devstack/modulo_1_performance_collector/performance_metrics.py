@@ -16,7 +16,7 @@ class PerformanceMetricsCollector:
         device_name: str,
     ) -> Dict[str, Any]:
         print(
-            f"[PLUGIN - MD1][performance_metrics] Avvio raccolta iostat per "
+            f"[PLUGIN - MD1 >> performance_metrics] Avvio raccolta iostat per "
             f"backend='{backend_name}', storage_type='{storage_type_plugin}', "
             f"device='{device_name}'",
             flush=True,
@@ -33,7 +33,7 @@ class PerformanceMetricsCollector:
         ]
 
         print(
-            f"[PLUGIN - MD1][performance_metrics] Esecuzione comando: {' '.join(cmd)}",
+            f"[PLUGIN - MD1 >> performance_metrics] Esecuzione comando: {' '.join(cmd)}",
             flush=True,
         )
 
@@ -46,11 +46,11 @@ class PerformanceMetricsCollector:
             )
 
             print(
-                f"[PLUGIN - MD1][performance_metrics] stdout di iostat: {result.stdout}",
+                f"[PLUGIN - MD1 >> performance_metrics] stdout di iostat: {result.stdout}",
                 flush=True,
             )
             print(
-                f"[PLUGIN - MD1][performance_metrics] stderr di iostat: {result.stderr}",
+                f"[PLUGIN - MD1 >> performance_metrics] stderr di iostat: {result.stderr}",
                 flush=True,
             )
 
@@ -97,7 +97,7 @@ class PerformanceMetricsCollector:
             }
 
             print(
-                f"[PLUGIN - MD1][performance_metrics] Metriche raccolte per il backend "
+                f"[PLUGIN - MD1 >> performance_metrics] Metriche raccolte per il backend "
                 f"'{backend_name}': {metrics}",
                 flush=True,
             )
